@@ -1,5 +1,6 @@
-param acrName string = 'DeployToAzure'
-param location string = resourceGroup().location
+//Creates Azure Container Registry 
+param acrName string = 'r0984339acr'
+param location string = 'Sweden Central'
 
 
 resource acr 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
@@ -8,8 +9,7 @@ resource acr 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
   sku:{
     name: 'Basic'
   }
-  properties:{
-    adminUserEnabled: true
-  }
-
+  properties:{adminUserEnabled:true}
 }
+
+
