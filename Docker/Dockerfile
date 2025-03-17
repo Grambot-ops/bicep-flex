@@ -1,4 +1,4 @@
-FROM python:3.13-alpine
+FROM python:3.12-alpine
 
 # Install dependencies and set up the project
 RUN apk add --no-cache git \
@@ -16,7 +16,7 @@ ENV FLASK_APP=crudapp.py
 ENV PATH="/example-flask-crud/venv/bin:$PATH"
 WORKDIR /example-flask-crud
 
-# Change this line to expose port 80 instead of 5000
+# Change this line to expose port 80 
 EXPOSE 80
 
 # Change the run command to use port 80
