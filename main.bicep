@@ -94,6 +94,7 @@ resource publicIP 'Microsoft.Network/publicIPAddresses@2023-04-01' = {
 }
 
 // Deploy ACI (private IP only)
+// Modify your ACI resource to include registry credentials
 resource aci 'Microsoft.ContainerInstance/containerGroups@2023-05-01' = {
   name: aciName
   location: location
@@ -109,10 +110,22 @@ resource aci 'Microsoft.ContainerInstance/containerGroups@2023-05-01' = {
         }
       }
     ]
+    imageRegistryCredentials: [
+      {
+        server: '${acrName}.azurecr.io'
+        username: acr.listCredentials().username
+        password: acr.listCredentials().passwords[0].value
+      }
+    ]
     ipAddress: { type: 'Private', ports: [ { protocol: 'TCP', port: 80 } ] }
     subnetIds: [ { id: resourceId('Microsoft.Network/virtualNetworks/subnets', vnet.name, 'private-subnet') } ]
     osType: 'Linux'
   }
+}
+
+// Reference to your ACR
+resource acr 'Microsoft.ContainerRegistry/registries@2023-07-01' existing = {
+  name: acrName
 }
 
 // Store ACI private IP as a variable
@@ -172,6 +185,7 @@ resource loadBalancer 'Microsoft.Network/loadBalancers@2023-04-01' = {
   }
 }
 
+
 // Backend pool configuration - separate resource to avoid circular reference
 resource backendPoolConfig 'Microsoft.Network/loadBalancers/backendAddressPools@2023-04-01' = {
   parent: loadBalancer
@@ -182,6 +196,12 @@ resource backendPoolConfig 'Microsoft.Network/loadBalancers/backendAddressPools@
         name: 'aci-backend'
         properties: {
           ipAddress: aciPrivateIP
+          virtualNetwork: {
+            id: vnet.id // Reference to the virtual network
+          }
+          subnet: {
+            id: resourceId('Microsoft.Network/virtualNetworks/subnets', vnet.name, 'private-subnet') // Reference to the private subnet
+          }
         }
       }
     ]
