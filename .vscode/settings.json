@@ -1,3 +1,10 @@
 {
-  "cSpell.words": ["acipull", "crudapp", "publicip", "venv", "vnet"]
+  "cSpell.words": [
+    "acipull",
+    "crudapp",
+    "nsgflowlogs",
+    "publicip",
+    "venv",
+    "vnet"
+  ]
 }
