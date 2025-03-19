@@ -2,8 +2,7 @@
 param acrName string = 'r0984339acr'
 param location string = 'Sweden Central'
 param tokenName string = 'acipull'
-// param tokenExpiryTime string = '2025-04-01T00:00:00Z'  // Set appropriate expiry
-// expiresOn: tokenExpiryTime
+
 resource acr 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
   name: acrName
   location: location

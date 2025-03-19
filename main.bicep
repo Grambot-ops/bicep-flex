@@ -107,8 +107,8 @@ resource aci 'Microsoft.ContainerInstance/containerGroups@2023-05-01' = {
           ports: [ { port: 80 } ]
           resources: { 
             requests: { 
-              cpu: 1  // Reduced from 1 to save resources
-              memoryInGB: 2 // Reduced from 2 to save resources
+              cpu: 1 
+              memoryInGB: 1
             } 
           }
           environmentVariables: [ { name: 'ENVIRONMENT', value: 'production' } ]
