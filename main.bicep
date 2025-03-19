@@ -75,7 +75,7 @@ resource nsgPrivate 'Microsoft.Network/networkSecurityGroups@2023-04-01' = {
           protocol: 'TCP'
           sourcePortRange: '*'
           destinationPortRange: '80'
-          sourceAddressPrefix: 'AzureLoadBalancer'
+          sourceAddressPrefix: 'internet'
           destinationAddressPrefix: '10.0.0.0/16'
           access: 'Allow'
           direction: 'Inbound'

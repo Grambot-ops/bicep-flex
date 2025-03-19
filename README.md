@@ -33,6 +33,6 @@ docker tag r0984339-crud-app r0984339acr.azurecr.io/crud-app:latest
 
 docker push r0984339acr.azurecr.io/crud-app:latest
 
-## deploy the bicep template
+## Deploy the bicep template
 
 az deployment group create --resource-group r0984339-rg --template-file main.bicep
