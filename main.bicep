@@ -94,7 +94,7 @@ resource publicIP 'Microsoft.Network/publicIPAddresses@2023-04-01' = {
 }
 
 // Deploy ACI (private IP only)
-// Modify your ACI resource to include registry credentials
+// Update your ACI resource to include log analytics
 resource aci 'Microsoft.ContainerInstance/containerGroups@2023-05-01' = {
   name: aciName
   location: location
@@ -105,7 +105,12 @@ resource aci 'Microsoft.ContainerInstance/containerGroups@2023-05-01' = {
         properties: {
           image: '${acrName}.azurecr.io/crud-app:latest'
           ports: [ { port: 80 } ]
-          resources: { requests: { cpu: 1, memoryInGB: 2 } }
+          resources: { 
+            requests: { 
+              cpu: 1  // Reduced from 1 to save resources
+              memoryInGB: 2 // Reduced from 2 to save resources
+            } 
+          }
           environmentVariables: [ { name: 'ENVIRONMENT', value: 'production' } ]
         }
       }
@@ -120,6 +125,12 @@ resource aci 'Microsoft.ContainerInstance/containerGroups@2023-05-01' = {
     ipAddress: { type: 'Private', ports: [ { protocol: 'TCP', port: 80 } ] }
     subnetIds: [ { id: resourceId('Microsoft.Network/virtualNetworks/subnets', vnet.name, 'private-subnet') } ]
     osType: 'Linux'
+    diagnostics: {
+      logAnalytics: {
+        workspaceId: logAnalyticsWorkspace.properties.customerId
+        workspaceKey: logAnalyticsWorkspace.listKeys().primarySharedKey
+      }
+    }
   }
 }
 
@@ -207,5 +218,18 @@ resource backendPoolConfig 'Microsoft.Network/loadBalancers/backendAddressPools@
     ]
   }
 }
+
+// Log Analytics workspace for container logs
+resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
+  name: 'r0984339-logs'
+  location: location
+  properties: {
+    sku: {
+      name: 'PerGB2018'
+    }
+    retentionInDays: 30
+  }
+}
+
 
 output aciPrivateIP string = aciPrivateIP
