@@ -1,4 +1,4 @@
-# bicep-flex
+# Bicep-Flex
 
 Deploying a simple crud app to aws using azure.
 
