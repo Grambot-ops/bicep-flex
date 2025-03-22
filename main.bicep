@@ -47,17 +47,45 @@ resource nsgPublic 'Microsoft.Network/networkSecurityGroups@2023-04-01' = {
   properties: {
     securityRules: [
       {
-        name: 'Allow-HTTP'
+        name: 'Allow-HTTP From Internet - only to load balancer'
         properties: {
           priority: 100
           protocol: 'TCP'
           sourcePortRange: '*'
           destinationPortRange: '80'
           sourceAddressPrefix: 'Internet'
-          destinationAddressPrefix: '*'
+          destinationAddressPrefix: 'VirtualNetwork'
           access: 'Allow'
           direction: 'Inbound'
         }
+      }
+      //Outbound Rule: Allow Traffic to Private subnet
+      { 
+        name: 'Allow-To-Private-Subnet' 
+        properties: { 
+          priority: 110
+          protocol: 'TCP' 
+          sourcePortRange: '*' 
+          destinationPortRange: '80' 
+          sourceAddressPrefix: '10.0.0.0/24' 
+          destinationAddressPrefix: '10.0.1.0/24'
+          access: 'Allow' 
+          direction: 'Outbound' 
+        } 
+      }
+      // Outbound Rule: Allow internet Access
+      { 
+        name: 'Allow-Internet-Access' 
+        properties: { 
+          priority: 120
+          protocol: '*' 
+          sourcePortRange: '*' 
+          destinationPortRange: '*' 
+          sourceAddressPrefix: '*' 
+          destinationAddressPrefix: 'Internet' 
+          access: 'Allow' 
+          direction: 'Outbound' 
+        } 
       }
     ]
   }
@@ -68,6 +96,7 @@ resource nsgPrivate 'Microsoft.Network/networkSecurityGroups@2023-04-01' = {
   location: location
   properties: {
     securityRules: [
+      // INBOUND Rule: Allow HTTP From Public Subnet
       {
         name: 'Allow-From-Public-Subnet'
         properties: {
@@ -75,10 +104,52 @@ resource nsgPrivate 'Microsoft.Network/networkSecurityGroups@2023-04-01' = {
           protocol: 'TCP'
           sourcePortRange: '*'
           destinationPortRange: '80'
-          sourceAddressPrefix: 'internet'
-          destinationAddressPrefix: '10.0.0.0/16'
+          sourceAddressPrefix: '10.0.0.0/24'
+          destinationAddressPrefix: '*'
           access: 'Allow'
           direction: 'Inbound'
+        }
+      }
+      // Inbound Rule: Allow from Load Balancer
+      { 
+        name: 'Allow-From-LoadBalancer' 
+        properties: { 
+          priority: 110 
+          protocol: 'TCP' 
+          sourcePortRange: '*' 
+          destinationPortRange: '80' 
+          sourceAddressPrefix: 'AzureLoadBalancer' 
+          destinationAddressPrefix: '*' 
+          access: 'Allow' 
+          direction: 'Inbound' 
+        } 
+      }
+      // Outbound Rule: Allow Responses back to Public Subnet and Load Balancer Only
+      { 
+        name: 'Allow-Responses' 
+        properties: { 
+          priority: 100 
+          protocol: '*' 
+          sourcePortRange: '*' 
+          destinationPortRange: '*' 
+          sourceAddressPrefix: '10.0.1.0/24' 
+          destinationAddressPrefix: '10.0.0.0/24'  // Changed from '*' to specific subnet
+          access: 'Allow' 
+          direction: 'Outbound' 
+        } 
+      }
+      // Deny the direct internet access from private subnet
+      {
+        name: 'Deny-Internet-Access'
+        properties: {
+          priority: 4096
+          protocol: '*'
+          sourcePortRange: '*'
+          destinationPortRange: '*'
+          sourceAddressPrefix: '10.0.1.0/24'
+          destinationAddressPrefix: 'Internet'
+          access: 'Deny'
+          direction: 'Outbound'
         }
       }
     ]
