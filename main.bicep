@@ -150,8 +150,7 @@ resource publicIP 'Microsoft.Network/publicIPAddresses@2023-04-01' = {
   properties: { publicIPAllocationMethod: 'Static' }
 }
 
-// Deploy ACI (private IP only)
-// Update your ACI resource to include log analytics
+// Deploy ACI (private IP only) and Log Analysis
 resource aci 'Microsoft.ContainerInstance/containerGroups@2023-05-01' = {
   name: aciName
   location: location
@@ -186,6 +185,7 @@ resource aci 'Microsoft.ContainerInstance/containerGroups@2023-05-01' = {
       logAnalytics: {
         workspaceId: logAnalyticsWorkspace.properties.customerId
         workspaceKey: logAnalyticsWorkspace.listKeys().primarySharedKey
+        logType: 'ContainerInstanceLogs'
       }
     }
   }
