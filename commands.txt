@@ -14,6 +14,13 @@ az deployment group create --resource-group r0984339-rg --template-file acr.bice
 # Log in to ACR
 
 az acr login --name r0984339acr
+az container registry token list-credentials \
+  --registry r0984339acr \
+  --name acipull \
+  --query "[].{Username:username, Password:passwords[0].value}" -o tsv
+
+# docker build 
+docker build -t r0984339-crud-app .
 
 # Tag the image
 

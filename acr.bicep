@@ -1,4 +1,4 @@
-// Create Azure Container Repository
+// Create Azure Container Registry
 param acrName string = 'r0984339acr'
 param location string = 'Sweden Central'
 param tokenName string = 'acipull'
@@ -10,7 +10,7 @@ resource acr 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
     name: 'Basic'
   }
   properties: {
-    adminUserEnabled: true
+    adminUserEnabled: false
   }
 }
 
@@ -30,10 +30,11 @@ resource acrToken 'Microsoft.ContainerRegistry/registries/tokens@2023-07-01' = {
   parent: acr
   name: tokenName
   properties: {
-    scopeMapId: pullScopeMap.id
+    scopeMapId: pullScopeMap.id // Use scopeMapId (singular)
     status: 'enabled'
   }
 }
 
+// Add outputs for non-sensitive information
 output acrLoginServer string = acr.properties.loginServer
 output acrName string = acr.name
