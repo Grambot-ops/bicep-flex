@@ -111,6 +111,20 @@ resource nsgPrivate 'Microsoft.Network/networkSecurityGroups@2023-04-01' = {
           direction: 'Inbound'
         }
       }
+      //outbound rule: Allow-loadbalancer return
+      {
+        name: 'Allow-LoadBalancer-Return'
+        properties: {
+          priority: 115
+          protocol: 'TCP'
+          sourcePortRange: '80'
+          destinationPortRange: '*'
+          sourceAddressPrefix: '10.0.1.0/24'
+          destinationAddressPrefix: 'AzureLoadBalancer'
+          access: 'Allow'
+          direction: 'Outbound'
+        }
+      }
       // Outbound Rule: Allow Responses back to Public Subnet and Load Balancer Only
       {
         name: 'Allow-Responses'
@@ -325,7 +339,7 @@ resource loadBalancer 'Microsoft.Network/loadBalancers@2023-04-01' = {
           protocol: 'Http'
           port: 80
           requestPath: '/'
-          intervalInSeconds: 15
+          intervalInSeconds: 50
           numberOfProbes: 2
         }
       }
