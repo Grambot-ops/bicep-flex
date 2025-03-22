@@ -120,7 +120,7 @@ resource nsgPrivate 'Microsoft.Network/networkSecurityGroups@2023-04-01' = {
           sourcePortRange: '*'
           destinationPortRange: '*'
           sourceAddressPrefix: '10.0.1.0/24'
-          destinationAddressPrefix: '10.0.0.0/24'
+          destinationAddressPrefix: 'AzureLoadBalancer'
           access: 'Allow'
           direction: 'Outbound'
         }
@@ -250,9 +250,6 @@ resource aci 'Microsoft.ContainerInstance/containerGroups@2023-05-01' = {
 resource loadBalancer 'Microsoft.Network/loadBalancers@2023-04-01' = {
   name: 'r0984339-lb'
   location: location
-  dependsOn: [
-    aci // Explicitly depend on ACI
-  ]
   sku: { name: 'Standard' }
   properties: {
     frontendIPConfigurations: [
@@ -272,12 +269,6 @@ resource loadBalancer 'Microsoft.Network/loadBalancers@2023-04-01' = {
               name: 'aci-backend'
               properties: {
                 ipAddress: aci.properties.ipAddress.ip
-                virtualNetwork: {
-                  id: vnet.id
-                }
-                subnet: {
-                  id: resourceId('Microsoft.Network/virtualNetworks/subnets', vnet.name, 'private-subnet')
-                }
               }
             }
           ]
@@ -319,7 +310,7 @@ resource loadBalancer 'Microsoft.Network/loadBalancers@2023-04-01' = {
         properties: {
           protocol: 'Http'
           port: 80
-          requestPath: '/' // Update to match the Flask app's root path
+          requestPath: '/'
           intervalInSeconds: 15
           numberOfProbes: 2
         }

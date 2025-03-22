@@ -30,3 +30,4 @@ az deployment group create --resource-group r0984339-rg --template-file main.bic
 # get the public ip
 
 az container show --name r0984339aci --resource-group r0984339-rg --query "ipAddress.ip" --output tsv
+az network public-ip show --resource-group r0984339-rg --name r0984339-lb-publicip --query ipAddress --output tsv
