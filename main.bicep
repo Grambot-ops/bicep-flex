@@ -183,77 +183,10 @@ resource acr 'Microsoft.ContainerRegistry/registries@2023-07-01' existing = {
   name: acrName
 }
 
-// Load Balancer - Create first, without dependencies on ACI
-resource loadBalancer 'Microsoft.Network/loadBalancers@2023-04-01' = {
-  name: 'r0984339-lb'
-  location: location
-  sku: { name: 'Standard' }
-  properties: {
-    frontendIPConfigurations: [
-      {
-        name: 'frontend_PublicAdd'
-        properties: {
-          publicIPAddress: { id: publicIP.id }
-        }
-      }
-    ]
-    backendAddressPools: [
-      {
-        name: 'backendPool_PrivateAdd'
-        properties: {} // Empty properties, will be configured later
-      }
-    ]
-    loadBalancingRules: [
-      {
-        name: 'http-rule'
-        properties: {
-          frontendIPConfiguration: {
-            id: resourceId(
-              'Microsoft.Network/loadBalancers/frontendIPConfigurations',
-              'r0984339-lb',
-              'frontend_PublicAdd'
-            )
-          }
-          backendAddressPool: {
-            id: resourceId(
-              'Microsoft.Network/loadBalancers/backendAddressPools',
-              'r0984339-lb',
-              'backendPool_PrivateAdd'
-            )
-          }
-          probe: {
-            id: resourceId('Microsoft.Network/loadBalancers/probes', 'r0984339-lb', 'http-probe')
-          }
-          protocol: 'Tcp'
-          frontendPort: 80
-          backendPort: 80
-          enableFloatingIP: false
-          idleTimeoutInMinutes: 5
-        }
-      }
-    ]
-    probes: [
-      {
-        name: 'http-probe'
-        properties: {
-          protocol: 'Http'
-          port: 80
-          requestPath: '/' // Update to match the Flask app's root path
-          intervalInSeconds: 15
-          numberOfProbes: 2
-        }
-      }
-    ]
-  }
-}
-
-// Deploy ACI (private IP only) - depends on LB 
+// Deploy ACI FIRST (private IP only)
 resource aci 'Microsoft.ContainerInstance/containerGroups@2023-05-01' = {
   name: aciName
   location: location
-  dependsOn: [
-    loadBalancer
-  ]
   properties: {
     containers: [
       {
@@ -313,57 +246,88 @@ resource aci 'Microsoft.ContainerInstance/containerGroups@2023-05-01' = {
   }
 }
 
-// Use a deployment script to update the load balancer's backend pool after ACI is deployed
-resource updateBackendPool 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
-  name: 'updateBackendPool'
+// Load Balancer - Create AFTER ACI is deployed with direct reference to ACI IP
+resource loadBalancer 'Microsoft.Network/loadBalancers@2023-04-01' = {
+  name: 'r0984339-lb'
   location: location
-  kind: 'AzureCLI'
+  dependsOn: [
+    aci // Explicitly depend on ACI
+  ]
+  sku: { name: 'Standard' }
   properties: {
-    azCliVersion: '2.45.0'
-    retentionInterval: 'P1D'
-    timeout: 'PT30M'
-    cleanupPreference: 'OnSuccess'
-    environmentVariables: [
+    frontendIPConfigurations: [
       {
-        name: 'RESOURCE_GROUP'
-        value: resourceGroup().name
-      }
-      {
-        name: 'LB_NAME'
-        value: loadBalancer.name
-      }
-      {
-        name: 'ACI_NAME'
-        value: aci.name
-      }
-      {
-        name: 'VNET_NAME'
-        value: vnet.name
-      }
-      {
-        name: 'SUBNET_NAME'
-        value: 'private-subnet'
+        name: 'frontend_PublicAdd'
+        properties: {
+          publicIPAddress: { id: publicIP.id }
+        }
       }
     ]
-    scriptContent: '''
-    # Wait for ACI to be fully ready (5 minute delay)
-    echo "Waiting for container to be fully ready..."
-      sleep 160
-      # Get ACI private IP
-      ACI_IP=$(az container show --resource-group $RESOURCE_GROUP --name $ACI_NAME --query 'ipAddress.ip' -o tsv)
-      
-      # Update backend pool with ACI IP
-      az network lb address-pool address add \
-        --resource-group $RESOURCE_GROUP \
-        --lb-name $LB_NAME \
-        --pool-name backendPool_PrivateAdd \
-        --name aci-backend \
-        --ip-address $ACI_IP \
-        --vnet $VNET_NAME \
-        --subnet $SUBNET_NAME
-    '''
+    backendAddressPools: [
+      {
+        name: 'backendPool_PrivateAdd'
+        properties: {
+          loadBalancerBackendAddresses: [
+            {
+              name: 'aci-backend'
+              properties: {
+                ipAddress: aci.properties.ipAddress.ip
+                virtualNetwork: {
+                  id: vnet.id
+                }
+                subnet: {
+                  id: resourceId('Microsoft.Network/virtualNetworks/subnets', vnet.name, 'private-subnet')
+                }
+              }
+            }
+          ]
+        }
+      }
+    ]
+    loadBalancingRules: [
+      {
+        name: 'http-rule'
+        properties: {
+          frontendIPConfiguration: {
+            id: resourceId(
+              'Microsoft.Network/loadBalancers/frontendIPConfigurations',
+              'r0984339-lb',
+              'frontend_PublicAdd'
+            )
+          }
+          backendAddressPool: {
+            id: resourceId(
+              'Microsoft.Network/loadBalancers/backendAddressPools',
+              'r0984339-lb',
+              'backendPool_PrivateAdd'
+            )
+          }
+          probe: {
+            id: resourceId('Microsoft.Network/loadBalancers/probes', 'r0984339-lb', 'http-probe')
+          }
+          protocol: 'Tcp'
+          frontendPort: 80
+          backendPort: 80
+          enableFloatingIP: false
+          idleTimeoutInMinutes: 5
+        }
+      }
+    ]
+    probes: [
+      {
+        name: 'http-probe'
+        properties: {
+          protocol: 'Http'
+          port: 80
+          requestPath: '/' // Update to match the Flask app's root path
+          intervalInSeconds: 15
+          numberOfProbes: 2
+        }
+      }
+    ]
   }
 }
 
 output publicIpAddress string = publicIP.properties.ipAddress
 output aciName string = aci.name
+output aciPrivateIp string = aci.properties.ipAddress.ip
