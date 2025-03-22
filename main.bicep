@@ -47,7 +47,7 @@ resource nsgPublic 'Microsoft.Network/networkSecurityGroups@2023-04-01' = {
   properties: {
     securityRules: [
       {
-        name: 'Allow-HTTP From Internet - only to load balancer'
+        name: 'Allow-HTTP From Internet - Only To Load Balancer'
         properties: {
           priority: 100
           protocol: 'TCP'
@@ -60,32 +60,18 @@ resource nsgPublic 'Microsoft.Network/networkSecurityGroups@2023-04-01' = {
         }
       }
       //Outbound Rule: Allow Traffic to Private subnet
-      { 
-        name: 'Allow-To-Private-Subnet' 
-        properties: { 
+      {
+        name: 'Allow-To-Private-Subnet'
+        properties: {
           priority: 110
-          protocol: 'TCP' 
-          sourcePortRange: '*' 
-          destinationPortRange: '80' 
-          sourceAddressPrefix: '10.0.0.0/24' 
+          protocol: 'TCP'
+          sourcePortRange: '*'
+          destinationPortRange: '80'
+          sourceAddressPrefix: '10.0.0.0/24'
           destinationAddressPrefix: '10.0.1.0/24'
-          access: 'Allow' 
-          direction: 'Outbound' 
-        } 
-      }
-      // Outbound Rule: Allow internet Access
-      { 
-        name: 'Allow-Internet-Access' 
-        properties: { 
-          priority: 120
-          protocol: '*' 
-          sourcePortRange: '*' 
-          destinationPortRange: '*' 
-          sourceAddressPrefix: '*' 
-          destinationAddressPrefix: 'Internet' 
-          access: 'Allow' 
-          direction: 'Outbound' 
-        } 
+          access: 'Allow'
+          direction: 'Outbound'
+        }
       }
     ]
   }
@@ -105,44 +91,44 @@ resource nsgPrivate 'Microsoft.Network/networkSecurityGroups@2023-04-01' = {
           sourcePortRange: '*'
           destinationPortRange: '80'
           sourceAddressPrefix: '10.0.0.0/24'
-          destinationAddressPrefix: '*'
+          destinationAddressPrefix: '10.0.1.0/24'
           access: 'Allow'
           direction: 'Inbound'
         }
       }
       // Inbound Rule: Allow from Load Balancer
-      { 
-        name: 'Allow-From-LoadBalancer' 
-        properties: { 
-          priority: 110 
-          protocol: 'TCP' 
-          sourcePortRange: '*' 
-          destinationPortRange: '80' 
-          sourceAddressPrefix: 'AzureLoadBalancer' 
-          destinationAddressPrefix: '*' 
-          access: 'Allow' 
-          direction: 'Inbound' 
-        } 
+      {
+        name: 'Allow-From-LoadBalancer'
+        properties: {
+          priority: 110
+          protocol: 'TCP'
+          sourcePortRange: '*'
+          destinationPortRange: '80'
+          sourceAddressPrefix: 'AzureLoadBalancer'
+          destinationAddressPrefix: '10.0.1.0/24'
+          access: 'Allow'
+          direction: 'Inbound'
+        }
       }
       // Outbound Rule: Allow Responses back to Public Subnet and Load Balancer Only
-      { 
-        name: 'Allow-Responses' 
-        properties: { 
-          priority: 100 
-          protocol: '*' 
-          sourcePortRange: '*' 
-          destinationPortRange: '*' 
-          sourceAddressPrefix: '10.0.1.0/24' 
-          destinationAddressPrefix: '10.0.0.0/24'  // Changed from '*' to specific subnet
-          access: 'Allow' 
-          direction: 'Outbound' 
-        } 
+      {
+        name: 'Allow-Responses'
+        properties: {
+          priority: 120
+          protocol: '*'
+          sourcePortRange: '*'
+          destinationPortRange: '*'
+          sourceAddressPrefix: '10.0.1.0/24'
+          destinationAddressPrefix: '10.0.0.0/24'
+          access: 'Allow'
+          direction: 'Outbound'
+        }
       }
       // Deny the direct internet access from private subnet
       {
         name: 'Deny-Internet-Access'
         properties: {
-          priority: 4096
+          priority: 130
           protocol: '*'
           sourcePortRange: '*'
           destinationPortRange: '*'
@@ -175,14 +161,14 @@ resource aci 'Microsoft.ContainerInstance/containerGroups@2023-05-01' = {
         name: 'crud-app'
         properties: {
           image: '${acrName}.azurecr.io/crud-app:latest'
-          ports: [ { port: 80 } ]
-          resources: { 
-            requests: { 
-              cpu: 1 
+          ports: [{ port: 80, protocol: 'TCP' }]
+          resources: {
+            requests: {
+              cpu: 1
               memoryInGB: 1
-            } 
+            }
           }
-          environmentVariables: [ { name: 'ENVIRONMENT', value: 'production' } ]
+          environmentVariables: [{ name: 'ENVIRONMENT', value: 'production' }]
         }
       }
     ]
@@ -193,8 +179,8 @@ resource aci 'Microsoft.ContainerInstance/containerGroups@2023-05-01' = {
         password: acr.listCredentials().passwords[0].value
       }
     ]
-    ipAddress: { type: 'Private', ports: [ { protocol: 'TCP', port: 80 } ] }
-    subnetIds: [ { id: resourceId('Microsoft.Network/virtualNetworks/subnets', vnet.name, 'private-subnet') } ]
+    ipAddress: { type: 'Private', ports: [{ protocol: 'TCP', port: 80 }] }
+    subnetIds: [{ id: resourceId('Microsoft.Network/virtualNetworks/subnets', vnet.name, 'private-subnet') }]
     osType: 'Linux'
     diagnostics: {
       logAnalytics: {
@@ -221,7 +207,7 @@ resource loadBalancer 'Microsoft.Network/loadBalancers@2023-04-01' = {
   properties: {
     frontendIPConfigurations: [
       {
-        name: 'frontend'
+        name: 'frontend(PublicAdd)'
         properties: {
           publicIPAddress: { id: publicIP.id }
         }
@@ -229,7 +215,7 @@ resource loadBalancer 'Microsoft.Network/loadBalancers@2023-04-01' = {
     ]
     backendAddressPools: [
       {
-        name: 'backendPool'
+        name: 'backendPool(PrivateAdd)'
       }
     ]
     loadBalancingRules: [
@@ -267,7 +253,6 @@ resource loadBalancer 'Microsoft.Network/loadBalancers@2023-04-01' = {
   }
 }
 
-
 // Backend pool configuration - separate resource to avoid circular reference
 resource backendPoolConfig 'Microsoft.Network/loadBalancers/backendAddressPools@2023-04-01' = {
   parent: loadBalancer
@@ -302,5 +287,5 @@ resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2022-10
   }
 }
 
-
 output aciPrivateIP string = aciPrivateIP
+output publicIpAddress string = publicIP.properties.ipAddress
