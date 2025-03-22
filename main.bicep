@@ -2,16 +2,6 @@ param aciName string = 'r0984339aci'
 param acrName string = 'r0984339acr'
 param location string = 'Sweden Central'
 
-// Reference ACR from acr.bicep
-module acrModule './acr.bicep' = {
-  name: 'acrDeployment'
-  params: {
-    acrName: acrName
-    location: location
-    tokenName: 'acipull'
-  }
-}
-
 // Create VNet with public and private subnets
 resource vnet 'Microsoft.Network/virtualNetworks@2023-04-01' = {
   name: 'r0984339vnet'
@@ -35,6 +25,7 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-04-01' = {
           networkSecurityGroup: {
             id: nsgPrivate.id
           }
+          // Add delegation for Azure Container Instances
           delegations: [
             {
               name: 'delegation-aci'
@@ -49,14 +40,14 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-04-01' = {
   }
 }
 
-// Create NSGs for public and private subnets
+// Create NSGs
 resource nsgPublic 'Microsoft.Network/networkSecurityGroups@2023-04-01' = {
   name: 'r0984339nsg-public'
   location: location
   properties: {
     securityRules: [
-      // Allow HTTP from internet to public subnet (only Load Balancer's IP)
       {
+        //Allow-HTTP-From-Internet-Only To Load Balancer
         name: 'Allow-HTTP-From-Internet'
         properties: {
           priority: 100
@@ -64,12 +55,12 @@ resource nsgPublic 'Microsoft.Network/networkSecurityGroups@2023-04-01' = {
           sourcePortRange: '*'
           destinationPortRange: '80'
           sourceAddressPrefix: 'Internet'
-          destinationAddressPrefix: '10.0.0.0/24'
+          destinationAddressPrefix: 'VirtualNetwork'
           access: 'Allow'
           direction: 'Inbound'
         }
       }
-      // Allow traffic to private subnet (outbound rule)
+      //Outbound Rule: Allow Traffic to Private subnet
       {
         name: 'Allow-To-Private-Subnet'
         properties: {
@@ -92,11 +83,25 @@ resource nsgPrivate 'Microsoft.Network/networkSecurityGroups@2023-04-01' = {
   location: location
   properties: {
     securityRules: [
-      // Allow HTTP from Load Balancer (inbound rule)
+      // INBOUND Rule: Allow HTTP From Public Subnet
+      {
+        name: 'Allow-From-Public-Subnet'
+        properties: {
+          priority: 100
+          protocol: 'TCP'
+          sourcePortRange: '*'
+          destinationPortRange: '80'
+          sourceAddressPrefix: '10.0.0.0/24'
+          destinationAddressPrefix: '10.0.1.0/24'
+          access: 'Allow'
+          direction: 'Inbound'
+        }
+      }
+      // Inbound Rule: Allow from Load Balancer
       {
         name: 'Allow-From-LoadBalancer'
         properties: {
-          priority: 100
+          priority: 110
           protocol: 'TCP'
           sourcePortRange: '*'
           destinationPortRange: '80'
@@ -106,25 +111,54 @@ resource nsgPrivate 'Microsoft.Network/networkSecurityGroups@2023-04-01' = {
           direction: 'Inbound'
         }
       }
-      // Allow ACI to access ACR (outbound rule)
+      // Outbound Rule: Allow Responses back to Public Subnet and Load Balancer Only
+      {
+        name: 'Allow-Responses'
+        properties: {
+          priority: 120
+          protocol: '*'
+          sourcePortRange: '*'
+          destinationPortRange: '*'
+          sourceAddressPrefix: '10.0.1.0/24'
+          destinationAddressPrefix: '10.0.0.0/24'
+          access: 'Allow'
+          direction: 'Outbound'
+        }
+      }
+      // Allow ACI to access ACR
       {
         name: 'Allow-ACR-Access'
         properties: {
-          priority: 110
+          priority: 125
           protocol: 'TCP'
           sourcePortRange: '*'
           destinationPortRange: '443'
           sourceAddressPrefix: '10.0.1.0/24'
+          // Allow access to ACR service tag
           destinationAddressPrefix: 'AzureContainerRegistry'
           access: 'Allow'
           direction: 'Outbound'
         }
       }
-      // Deny direct internet access from private subnet (outbound rule)
+      //Allow-Essential-outbound
+      {
+        name: 'Allow-Essential-Outbound'
+        properties: {
+          priority: 126
+          protocol: 'TCP'
+          sourcePortRange: '*'
+          destinationPortRange: '*'
+          sourceAddressPrefix: '10.0.1.0/24'
+          destinationAddressPrefix: 'AzureCloud'
+          access: 'Allow'
+          direction: 'Outbound'
+        }
+      }
+      // Deny the direct internet access from private subnet
       {
         name: 'Deny-Internet-Access'
         properties: {
-          priority: 120
+          priority: 130
           protocol: '*'
           sourcePortRange: '*'
           destinationPortRange: '*'
@@ -142,8 +176,8 @@ resource nsgPrivate 'Microsoft.Network/networkSecurityGroups@2023-04-01' = {
 resource publicIP 'Microsoft.Network/publicIPAddresses@2023-04-01' = {
   name: 'r0984339-lb-publicip'
   location: location
-  sku: { name: 'Basic' }
-  properties: { publicIPAllocationMethod: 'Dynamic' }
+  sku: { name: 'Standard' }
+  properties: { publicIPAllocationMethod: 'Static' }
 }
 
 // Log Analytics workspace for container logs
@@ -158,18 +192,21 @@ resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2022-10
   }
 }
 
+// Reference to your ACR - using existing to match your separate deployment
+resource acr 'Microsoft.ContainerRegistry/registries@2023-07-01' existing = {
+  name: acrName
+}
+
 // Deploy ACI FIRST (private IP only)
 resource aci 'Microsoft.ContainerInstance/containerGroups@2023-05-01' = {
   name: aciName
   location: location
-  #disable-next-line no-unnecessary-dependson
-  dependsOn: [vnet] // Ensure VNet is deployed first
   properties: {
     containers: [
       {
         name: 'crud-app'
         properties: {
-          image: '${acrModule.outputs.acrLoginServer}/crud-app:latest'
+          image: '${acrName}.azurecr.io/crud-app:latest'
           ports: [{ port: 80, protocol: 'TCP' }]
           resources: {
             requests: {
@@ -179,8 +216,9 @@ resource aci 'Microsoft.ContainerInstance/containerGroups@2023-05-01' = {
           }
           environmentVariables: [
             { name: 'ENVIRONMENT', value: 'production' }
-            { name: 'FLASK_APP', value: 'crudapp.py' } // Match Dockerfile ENV
+            { name: 'FLASK_APP', value: 'crudapp.py' } // Match the Dockerfile ENV
           ]
+          // Add liveness probe for better health monitoring that matches Flask app
           livenessProbe: {
             httpGet: {
               path: '/'
@@ -195,9 +233,9 @@ resource aci 'Microsoft.ContainerInstance/containerGroups@2023-05-01' = {
     ]
     imageRegistryCredentials: [
       {
-        server: acrModule.outputs.acrLoginServer
-        username: '<token-username>' // Replace with dynamic value
-        password: '<token-password>' // Replace with dynamic value
+        server: '${acrName}.azurecr.io'
+        username: acr.listCredentials().username
+        password: acr.listCredentials().passwords[0].value
       }
     ]
     ipAddress: {
@@ -217,16 +255,15 @@ resource aci 'Microsoft.ContainerInstance/containerGroups@2023-05-01' = {
         logType: 'ContainerInstanceLogs'
       }
     }
+    // Set restart policy
     restartPolicy: 'Always'
   }
 }
 
-// Load Balancer - Create AFTER ACI is deployed
+// Load Balancer - Create AFTER ACI is deployed with direct reference to ACI IP
 resource loadBalancer 'Microsoft.Network/loadBalancers@2023-04-01' = {
   name: 'r0984339-lb'
   location: location
-  #disable-next-line no-unnecessary-dependson
-  dependsOn: [aci] // Ensure ACI is deployed first
   sku: { name: 'Standard' }
   properties: {
     frontendIPConfigurations: [
@@ -285,7 +322,7 @@ resource loadBalancer 'Microsoft.Network/loadBalancers@2023-04-01' = {
       {
         name: 'http-probe'
         properties: {
-          protocol: 'Tcp'
+          protocol: 'Http'
           port: 80
           requestPath: '/'
           intervalInSeconds: 15
