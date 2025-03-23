@@ -97,20 +97,6 @@ resource nsgPrivate 'Microsoft.Network/networkSecurityGroups@2023-04-01' = {
           direction: 'Inbound'
         }
       }
-      // Inbound Rule: Allow from Load Balancer
-      {
-        name: 'Allow-From-LoadBalancer'
-        properties: {
-          priority: 110
-          protocol: 'TCP'
-          sourcePortRange: '*'
-          destinationPortRange: '80'
-          sourceAddressPrefix: 'AzureLoadBalancer'
-          destinationAddressPrefix: '10.0.1.0/24'
-          access: 'Allow'
-          direction: 'Inbound'
-        }
-      }
       //outbound rule: Allow-loadbalancer return
       {
         name: 'Allow-LoadBalancer-Return'
