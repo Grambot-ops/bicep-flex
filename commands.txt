@@ -47,4 +47,4 @@ az network lb address-pool show --lb-name r0984339-lb -g r0984339-rg --name back
 
 az container show --name r0984339aci -g r0984339-rg --query "containers[0].instanceView.currentState.state"
 
-az container logs --name r0984339aci -g r0994339-rg  
+az container logs --name r0984339aci -g r0984339-rg  
