@@ -241,6 +241,12 @@ resource loadBalancer 'Microsoft.Network/loadBalancers@2023-04-01' = {
               name: 'aci-backend'
               properties: {
                 ipAddress: aci.properties.ipAddress.ip
+                subnet: {
+                  id: resourceId('Microsoft.Network/virtualNetworks/subnets', vnet.name, 'private-subnet')
+                }
+                virtualNetwork: {
+                  id: vnet.id
+                }
               }
             }
           ]

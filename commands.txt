@@ -39,3 +39,12 @@ az deployment group create --resource-group r0984339-rg --template-file main.bic
 
 az container show --name r0984339aci --resource-group r0984339-rg --query "ipAddress.ip" --output tsv
 az network public-ip show --resource-group r0984339-rg --name r0984339-lb-publicip --query ipAddress --output tsv
+
+debug
+az network lb probe list --lb-name r0984339-lb -g r0984339-rg -o table
+
+az network lb address-pool show --lb-name r0984339-lb -g r0984339-rg --name backendPool_PrivateAdd
+
+az container show --name r0984339aci -g r0984339-rg --query "containers[0].instanceView.currentState.state"
+
+az container logs --name r0984339aci -g r0994339-rg  
