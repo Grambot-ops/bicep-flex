@@ -91,7 +91,7 @@ resource nsgPrivate 'Microsoft.Network/networkSecurityGroups@2023-04-01' = {
           protocol: 'TCP'
           sourcePortRange: '*'
           destinationPortRange: '80'
-          sourceAddressPrefix: '10.0.0.0/24'
+          sourceAddressPrefix: 'Internet'
           destinationAddressPrefix: '10.0.1.0/24'
           access: 'Allow'
           direction: 'Inbound'
@@ -223,6 +223,10 @@ resource loadBalancer 'Microsoft.Network/loadBalancers@2023-04-01' = {
   name: 'r0984339-lb'
   location: location
   sku: { name: 'Standard' }
+  dependsOn: [
+    #disable-next-line no-unnecessary-dependson
+    aci // Explicit dependency to ensure ACI is deployed first
+  ]
   properties: {
     frontendIPConfigurations: [
       {
