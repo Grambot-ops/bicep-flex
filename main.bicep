@@ -97,20 +97,6 @@ resource nsgPrivate 'Microsoft.Network/networkSecurityGroups@2023-04-01' = {
           direction: 'Inbound'
         }
       }
-      //outbound rule: Allow-loadbalancer return
-      {
-        name: 'Allow-LoadBalancer-Return'
-        properties: {
-          priority: 115
-          protocol: 'TCP'
-          sourcePortRange: '*'
-          destinationPortRange: '*'
-          sourceAddressPrefix: '10.0.1.0/24'
-          destinationAddressPrefix: 'AzureLoadBalancer'
-          access: 'Allow'
-          direction: 'Outbound'
-        }
-      }
       // Outbound Rule: Allow Responses back to Public Subnet and Load Balancer Only
       {
         name: 'Allow-Responses'
@@ -136,20 +122,6 @@ resource nsgPrivate 'Microsoft.Network/networkSecurityGroups@2023-04-01' = {
           sourceAddressPrefix: '10.0.1.0/24'
           // Allow access to ACR service tag
           destinationAddressPrefix: 'AzureContainerRegistry'
-          access: 'Allow'
-          direction: 'Outbound'
-        }
-      }
-      //Allow-Essential-outbound
-      {
-        name: 'Allow-Essential-Outbound'
-        properties: {
-          priority: 126
-          protocol: 'TCP'
-          sourcePortRange: '*'
-          destinationPortRange: '*'
-          sourceAddressPrefix: '10.0.1.0/24'
-          destinationAddressPrefix: 'AzureCloud'
           access: 'Allow'
           direction: 'Outbound'
         }
