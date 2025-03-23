@@ -14,6 +14,7 @@ az deployment group create --resource-group r0984339-rg --template-file acr.bice
 # Log in to ACR
 
 az acr login --name r0984339acr
+
 az container registry token list-credentials \
   --registry r0984339acr \
   --name acipull \

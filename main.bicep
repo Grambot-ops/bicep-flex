@@ -168,20 +168,6 @@ resource nsgPrivate 'Microsoft.Network/networkSecurityGroups@2023-04-01' = {
           direction: 'Outbound'
         }
       }
-      // Deny the direct internet access from private subnet
-      {
-        name: 'Deny-Internet-Access'
-        properties: {
-          priority: 130
-          protocol: '*'
-          sourcePortRange: '*'
-          destinationPortRange: '*'
-          sourceAddressPrefix: '10.0.1.0/24'
-          destinationAddressPrefix: 'Internet'
-          access: 'Deny'
-          direction: 'Outbound'
-        }
-      }
     ]
   }
 }
