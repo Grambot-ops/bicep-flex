@@ -117,7 +117,7 @@ resource nsgPrivate 'Microsoft.Network/networkSecurityGroups@2023-04-01' = {
         properties: {
           priority: 115
           protocol: 'TCP'
-          sourcePortRange: '80'
+          sourcePortRange: '*'
           destinationPortRange: '*'
           sourceAddressPrefix: '10.0.1.0/24'
           destinationAddressPrefix: 'AzureLoadBalancer'
