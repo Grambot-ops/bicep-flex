@@ -44,7 +44,7 @@ I will add a diagram here.
 1.  **Clone the Repository:**
 
     ```bash
-    git clone <YOUR_REPOSITORY_URL>  # Replace with your repository URL
+    git clone https://github.com/Grambot-ops/bicep-flex
     cd bicep-flex
     ```
 
