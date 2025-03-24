@@ -143,7 +143,7 @@ Once the deployment is complete, open a web browser and navigate to the public I
 
 - **Networking Issues:** Double-check the NSG rules to ensure that traffic is allowed from the load balancer's public subnet to the ACI's private subnet on port 80. Also ensure ACI can access ACR (Outbound on port 443 to the `AzureContainerRegistry` service tag).
 
-- **Azure Resource Explorer:** Use this tool in the Azure Portal (search "Resource Explorer") for more detailed information on the state and propertites of the components if something is missconfigured.
+- **Azure Resource Explorer:** Use this tool in the Azure Portal (search "Resource Explorer") for more detailed information on the state and Properties of the components if something is missconfigured.
 
 ## Cleanup
 
