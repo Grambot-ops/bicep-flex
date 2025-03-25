@@ -18,7 +18,7 @@ This project showcases the following concepts:
 
 ## Architecture Diagram
 
-![Image](https://github.com/user-attachments/assets/d21c2d0c-bf8e-4f47-81ce-0a90993a4f5e)
+![Image](https://github.com/user-attachments/assets/d1c00fcd-8c97-4b5e-8d2e-122d2ab938d7)
 
 ![Image](https://github.com/user-attachments/assets/be16a092-d4db-4380-a179-1a9ab114ac3d)
 
